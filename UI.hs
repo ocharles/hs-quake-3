@@ -8,7 +8,9 @@ import Control.Monad
 import Data.Foldable (for_)
 import Data.Function (fix)
 import Data.Traversable (for)
-import qualified Data.Vector.Storable as V
+import qualified Data.Vector as BoxedV
+import qualified Data.Vector.Generic as V
+import qualified Data.Vector.Storable as V (unsafeWith)
 import Foreign (Ptr, nullPtr)
 import Foreign.C (peekCString)
 import GLObjects
@@ -124,8 +126,26 @@ uploadBSP BSPFile {..} = do
   return (VertexArrayObject vao)
 
 uploadLightMaps :: BSPFile -> IO [GLObjects.Texture]
-uploadLightMaps BSPFile {bspLightMaps } =
-  for (V.toList bspLightMaps) (\(LightMap pixels) -> uploadTexture2D pixels)
+uploadLightMaps BSPFile {bspLightMaps} =
+  for
+    (V.toList bspLightMaps)
+    (\(LightMap pixels) ->
+       uploadTexture2D $
+       V.convert $
+       V.concatMap id $
+       V.generate (128 * 128) $ \j ->
+         let overbright = 2
+             colours =
+               [ shiftL
+                 (fromIntegral (pixels V.! (j * 3 + n)) :: Int)
+                 overbright
+               | n <- [0 .. 2]
+               ]
+         in BoxedV.fromList $ fmap fromIntegral $
+            if any (> 255) colours
+              then let maxi = maximum colours
+                   in fmap (\a -> a * 255 `div` maxi) colours
+              else colours)
 
 -- | This will install a synchronous debugging hook to allow OpenGL to notify us
 -- if we're doing anything deprecated, non-portable, undefined, etc.

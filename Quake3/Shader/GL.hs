@@ -14,12 +14,10 @@ import Control.Lens hiding ((<.>))
 import Control.Monad
 import Control.Monad.IO.Class
 import Control.Monad.State.Class
-import Data.Foldable
 import Data.Map.Strict (Map)
 import qualified Data.Map.Strict as Map
 import Data.Maybe
 import Data.Monoid
-import qualified Data.Sequence as Seq
 import Data.Traversable (for)
 import GLObjects hiding (setUniform)
 import Graphics.GL
@@ -43,6 +41,7 @@ instance (MonadIO m, RenderNode a m) =>
       (return ())
       (getMonoidalMap m)
 
+sortLayer :: TC.SortLayer -> a -> Sort a
 sortLayer l = Sort . MonoidalMap . Map.singleton l
 
 newtype CompilationCache = CompilationCache
@@ -75,7 +74,7 @@ compileGL shader = do
           (Nothing, Just m) ->
             case m of
               TC.MapLightMap ->
-                return $ \t lm ->
+                return $ \_ lm ->
                   case lm of
                     Nothing -> bindTexture 0
                     Just (Texture t) -> bindTexture t
@@ -166,7 +165,7 @@ compileTCMod (TC.TCModRotate degreesSec) =
           (V3 (sin (t * theta)) (cos (t * theta)) 0)
           (V3 0 0 1)) !*!
        (identity & column _z . _xy .~ (-0.5))
-compileTCMod _ = TextureMod $ \t -> identity
+compileTCMod _ = TextureMod $ \_ -> identity
 
 toBlendFactor :: TC.Factor -> GLenum
 toBlendFactor TC.One = GL_ONE
@@ -192,8 +191,8 @@ lookupTexture t = do
         t <-
           liftIO $
           loadTexture (nameOnly <.> ".tga") `catch`
-          (\(SomeException e) -> loadTexture (nameOnly <.> ".jpg")) `catch`
-          (\(SomeException e) -> do
+          (\(SomeException _) -> loadTexture (nameOnly <.> ".jpg")) `catch`
+          (\(SomeException _) -> do
              putStrLn ("Missing " ++ show nameOnly)
              loadTexture "../UVCheckerMap02-512.png")
         modify (\c -> c {textures = Map.insert nameOnly t ts})

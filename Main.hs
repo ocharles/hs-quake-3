@@ -5,46 +5,34 @@
 
 module Main where
 
-import Data.Foldable (traverse_)
 import Control.Arrow
--- import Control.Concurrent.STM
 import Control.Exception
 import Control.Lens ((<&>))
--- import Control.Monad
 import Control.Monad.Managed
+import Control.Monad.Trans.Reader
 import Control.Monad.Trans.State.Strict
 import qualified Control.Wire as W
 import qualified Control.Wire.Controller as W
--- import Control.Wires.Extra
-import qualified Data.Sequence as Seq
 import Data.ByteString.Char8 (unpack)
--- import qualified Data.ByteString.Lazy as LBS
--- import Data.List (sort)
+import Data.Foldable (traverse_)
 import qualified Data.Map.Strict as Map
--- import Data.Maybe
--- import Data.Monoid
+import qualified Data.Sequence as Seq
 import qualified Data.Text.IO as T
 import Data.Traversable (for)
 import qualified Data.Vector.Generic as V
--- import qualified Data.Vector.Storable as SV
 import GLObjects hiding (Texture)
 import Graphics.GL.Core33
--- import Linear
 import Parser
--- -- import Quake3.GL.Shader (compileShader, textureMaterial, emptyCache, lookupTexture)
+import Quake3.Shader.GL (compileGL)
 import Quake3.Shader.Parser (parseShaderFile, shaderName)
 import Quake3.Shader.TypeCheck (tcShader)
 import qualified Quake3.Shader.TypeCheck as TC
-import Quake3.Shader.GL (compileGL)
--- import Rapid
-import Render
+import RenderGraph
 import SDL hiding (identity, perspective)
--- import System.Clock
 import System.Directory
 import System.FilePath
 import Text.Megaparsec (parse)
 import UI
--- import Wires.Camera
 import Wires.Game
 
 main :: IO ()
@@ -62,7 +50,7 @@ main =
             src <- T.readFile ("scripts" </> p)
             case parse parseShaderFile p src of
               Left e -> do
-                putStrLn $ "Failed to parse " ++ p
+                putStrLn $ "Failed to parse " ++ p ++ ": " ++ show e
                 return mempty
               Right shaders -> do
                 fmap mconcat $
@@ -121,13 +109,14 @@ main =
     glUseProgram (programName shader)
 
     vao <- liftIO $ uploadBSP bspFile
+    glBindVertexArray (vertexArrayObjectName vao)
 
     u_projViewModel <- liftIO $ uniformLocation shader "u_projViewModel"
 
     liftIO $ W.control $ proc _ -> do
       e <- game bspFile (map GLObjects.textureName lightMaps) compiledShaders u_projViewModel -< ()
-      W.onEvent -< e <&> \p -> do
-        pass shader vao p
+      W.onEvent -< e <&> \scene -> do
+        runReaderT (draw scene) shader
         SDL.glSwapWindow window
 
       returnA -< W.never

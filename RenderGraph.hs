@@ -12,16 +12,16 @@ module RenderGraph where
 
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Reader
+import Data.Bits
+import Data.Coerce
 import Data.Foldable (toList)
 import Data.IntMap (IntMap)
 import qualified Data.IntMap as IM
 import Data.Map (Map)
 import qualified Data.Map as Map
 import GLObjects
-import Graphics.GL.Core33
 import Graphics.GL.Compatibility45
 import Linear
-import Data.Coerce
 
 -- | The class of types that act as rendering nodes - generally operations that
 -- manipulate OpenGL state.
@@ -241,3 +241,22 @@ instance (RenderNode a m, MonadIO m) =>
          next)
       (return ())
       (getMonoidalMap m)
+
+
+-- View from a camera, generally the top-most node in rendering.
+
+data Viewport a = Viewport
+  { viewViewport :: (GLint, GLint, GLint, GLint)
+  , viewChild :: a
+  } deriving (Functor)
+
+instance (RenderNode a m, MonadIO m) => RenderNode (Viewport a) m where
+  draw (Viewport (x, y, w, h) child) = do
+    liftIO $ do
+      glViewport x y w h
+      glClearColor 0 0 0 0
+      glClear (GL_COLOR_BUFFER_BIT .|. GL_DEPTH_BUFFER_BIT)
+    draw child
+
+viewport :: (GLint, GLint, GLint, GLint) -> a -> Viewport a
+viewport = Viewport

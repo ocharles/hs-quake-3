@@ -32,7 +32,6 @@ import Graphics.GL.Core33
 import Linear
 import Parser
 import Prelude hiding ((.), id)
-import Render
 import RenderGraph
 import qualified SDL
 import qualified SDL.Event
@@ -63,7 +62,7 @@ game
   -> [GLuint]
   -> Map.Map Parser.Texture (Double -> Maybe GLObjects.Texture -> f a)
   -> UniformLocation
-  -> Wire IO t (Event (Pass (f (GLIO a))))
+  -> Wire IO t (Event (Viewport (f (GLIO a))))
 game bspFile lightMaps compiledShaders u_view = proc _ -> do
   maybeSdlEvent <- newEvent -< Just <$> SDL.pollEvent
   let sdlEvent = filterJust maybeSdlEvent
@@ -132,7 +131,7 @@ game bspFile lightMaps compiledShaders u_view = proc _ -> do
   -- Whenever we aren't stepping physics, render what we have.
   sinkM44 u_view -<
     projection !*! view <$ rendered
-  returnA -< Pass tGame (Framebuffer 0) (0,0,windowWidth,windowHeight) scene <$ rendered
+  returnA -< viewport (0,0,windowWidth,windowHeight) scene <$ rendered
 
   where
 

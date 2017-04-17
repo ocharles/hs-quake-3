@@ -60,9 +60,9 @@ game
   :: (Monoid (f (GLIO a)), Functor f)
   => BSPFile
   -> [GLuint]
-  -> Map.Map Parser.Texture (Double -> Maybe GLObjects.Texture -> f a)
+  -> Map.Map Parser.Texture (Maybe GLObjects.Texture -> f a)
   -> UniformLocation
-  -> Wire IO t (Event (Viewport (f (GLIO a))))
+  -> Wire IO t (Event (Double, Viewport (f (GLIO a))))
 game bspFile lightMaps compiledShaders u_view = proc _ -> do
   maybeSdlEvent <- newEvent -< Just <$> SDL.pollEvent
   let sdlEvent = filterJust maybeSdlEvent
@@ -131,7 +131,7 @@ game bspFile lightMaps compiledShaders u_view = proc _ -> do
   -- Whenever we aren't stepping physics, render what we have.
   sinkM44 u_view -<
     projection !*! view <$ rendered
-  returnA -< viewport (0,0,windowWidth,windowHeight) scene <$ rendered
+  returnA -< (tGame, viewport (0,0,windowWidth,windowHeight) scene) <$ rendered
 
   where
 
@@ -185,16 +185,15 @@ doDraw lightMaps bspFile compiledShaders =
               Face {..} = bspFaces bspFile V.! fromIntegral i
               usesLightMap =
                 faceLMIndex >= 0 && fromIntegral faceLMIndex < length lightMaps
-              shader t =
+              shader =
                 (compiledShaders Map.!
                  (bspTextures bspFile V.! fromIntegral faceTexture))
-                  t
                   (if usesLightMap
                      then Just
                             (GLObjects.Texture
                                (lightMaps !! fromIntegral faceLMIndex))
                      else Nothing)
-              face t =
+              face =
                 glIO
                   (glDrawElementsBaseVertex
                      GL_TRIANGLES
@@ -205,14 +204,14 @@ doDraw lightMaps bspFile compiledShaders =
                          fromIntegral faceMeshVert *
                          fromIntegral (sizeOf (undefined :: Int32))))
                      (fromIntegral faceVertex)) <$>
-                shader t
+                shader
           in if i `Set.member` seen
                then (seen, clusters)
                else ( Set.insert i seen
                     , IntMap.insertWith
                         mappend
                         (fromIntegral cluster)
-                        (\t -> face t)
+                        face
                         clusters))
        (mempty, mempty)
        (V.concatMap

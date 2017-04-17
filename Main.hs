@@ -115,8 +115,8 @@ main =
 
     liftIO $ W.control $ proc _ -> do
       e <- game bspFile (map GLObjects.textureName lightMaps) compiledShaders u_projViewModel -< ()
-      W.onEvent -< e <&> \scene -> do
-        runReaderT (draw scene) shader
+      W.onEvent -< e <&> \(t, scene) -> do
+        runReaderT (draw scene) (t, shader)
         SDL.glSwapWindow window
 
       returnA -< W.never

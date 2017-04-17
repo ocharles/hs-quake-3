@@ -187,12 +187,12 @@ instance GLSLType Bool where
 instance GLSLType (M33 Float) where
   setter = m33
 
-instance (RenderNode a (ReaderT Program IO), GLSLType k) =>
-         RenderNode (SetUniform k a) (ReaderT Program IO) where
+instance (RenderNode a (ReaderT (x, Program) IO), GLSLType k) =>
+         RenderNode (SetUniform k a) (ReaderT (x, Program) IO) where
   draw (SetUniform m) =
     Map.foldrWithKey
       (\(name, v) children next -> do
-         ReaderT $ \program -> GLObjects.setUniform setter program name v
+         ReaderT $ \(_, program) -> GLObjects.setUniform setter program name v
          draw children
          next)
       (return ())

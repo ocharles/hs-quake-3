@@ -25,24 +25,8 @@ import Linear
 import qualified Quake3.Shader.TypeCheck as TC
 import RenderGraph
 import System.FilePath
+import Quake3.RenderPipeline
 
---------------------------------------------------------------------------------
-
-newtype Sort a = Sort (MonoidalMap TC.SortLayer a)
-  deriving (Functor, Monoid)
-
-instance (MonadIO m, RenderNode a m) =>
-         RenderNode (Sort a) m where
-  draw (Sort m) = do
-    Map.foldr
-      (\child next -> do
-         draw child
-         next)
-      (return ())
-      (getMonoidalMap m)
-
-sortLayer :: TC.SortLayer -> a -> Sort a
-sortLayer l = Sort . MonoidalMap . Map.singleton l
 
 newtype CompilationCache = CompilationCache
   { textures :: Map String Texture
@@ -53,7 +37,7 @@ newtype CompilationCache = CompilationCache
 compileGL
   :: (MonadState CompilationCache m, MonadIO m)
   => TC.Shader
-  -> m (Double -> Maybe Texture -> (Sort |> Cull |> MultiplePasses |> BindTexture |> SetUniform Bool |> SetUniform (M33 Float) |> AlphaFunc |> BlendMode |> DepthFunc) ())
+  -> m (Maybe Texture -> (Sort |> Cull |> MultiplePasses |> BindTexture |> SetUniform Bool |> SetDynamicUniform (M33 Float) |> AlphaFunc |> BlendMode |> DepthFunc) ())
 compileGL shader = do
   passes <-
     for (shader ^. TC.passes) $ \pass -> do
@@ -65,7 +49,8 @@ compileGL shader = do
           (Just animMap, _) -> do
             frames <- mapM lookupTexture (TC.animMapFrames animMap)
             return
-              (\t _ ->
+              (\_ ->
+                 let t = 0 in
                  bindTexture
                    (textureName
                       (frames !!
@@ -74,23 +59,23 @@ compileGL shader = do
           (Nothing, Just m) ->
             case m of
               TC.MapLightMap ->
-                return $ \_ lm ->
+                return $ \lm ->
                   case lm of
                     Nothing -> bindTexture 0
                     Just (Texture t) -> bindTexture t
               TC.MapTexture m -> do
                 Texture t <- lookupTexture m
-                return (\_ _ -> bindTexture t)
-          _ -> return $ \_ _ -> bindTexture 0
-      return $ \t lm ->
-        Compose . bindTexture_ t lm $
+                return (\_ -> bindTexture t)
+          _ -> return $ \_ -> bindTexture 0
+      return $ \lm ->
+        Compose . bindTexture_ lm $
         Compose .
         setUniform
           "u_lightMap"
           (case textureSource of
              (Nothing, Just TC.MapLightMap) -> True
              _ -> False) $
-        Compose . setUniform "u_texMod" (fmap realToFrac <$> texModF t) $
+        Compose . setDynamicUniform "u_texMod" (\t -> fmap realToFrac <$> texModF t) $
         Compose .
         alphaFunc
           (fmap
@@ -110,7 +95,7 @@ compileGL shader = do
              Nothing -> GL_LEQUAL
              Just TC.Equal -> GL_EQUAL) $
         ()
-  return $ \t lm ->
+  return $ \lm ->
     Compose .
     sortLayer
       (let sortExplicit = getLast (shader ^. TC.sort)
@@ -130,7 +115,7 @@ compileGL shader = do
          Just TC.BackSided -> CullFace GL_FRONT
          Just TC.TwoSided -> CullNothing
          _ -> CullFace GL_BACK) $
-    Compose $ multiplePasses $ fmap (\p -> p t lm) passes
+    Compose $ multiplePasses $ fmap (\p -> p lm) passes
 
 newtype TextureMod = TextureMod (Double -> M33 Double)
 

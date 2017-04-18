@@ -4,7 +4,12 @@
 {-# LANGUAGE MultiParamTypeClasses #-}
 {-# LANGUAGE TypeOperators #-}
 
-module Quake3.RenderPipeline where
+module Quake3.RenderPipeline
+  ( Sort
+  , sortLayer
+  , Quake3Render(..)
+  , setDynamicUniform
+  ) where
 
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Reader
@@ -72,7 +77,7 @@ instance (RenderNode a (ReaderT (Double,Program) IO), GLSLType k) =>
 
 
 --------------------------------------------------------------------------------
-newtype Quake3Render a = Quake3Render ((Sort |> Cull |> MultiplePasses |> BindTexture |> SetUniform Bool |> SetUniform (M33 Float) |> AlphaFunc |> BlendMode |> DepthFunc) a)
+newtype Quake3Render a = Quake3Render ((Sort |> Cull |> MultiplePasses |> BindTexture |> SetUniform Bool |> SetDynamicUniform (M33 Float) |> AlphaFunc |> BlendMode |> DepthFunc) a)
   deriving (Functor, Monoid)
 
 instance (RenderNode a (ReaderT (Double, Program) IO)) =>

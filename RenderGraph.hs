@@ -1,4 +1,5 @@
 {-# LANGUAGE BangPatterns #-}
+{-# LANGUAGE ExplicitNamespaces #-}
 {-# LANGUAGE DeriveFunctor #-}
 {-# LANGUAGE FlexibleContexts #-}
 {-# LANGUAGE FlexibleInstances #-}
@@ -8,7 +9,21 @@
 {-# LANGUAGE TypeApplications #-}
 {-# LANGUAGE TypeOperators #-}
 
-module RenderGraph where
+module RenderGraph
+  ( RenderNode(..)
+  , type (|>)(..)
+  , Cull, CullOp(..), cull
+  , GLIO, glIO
+  , MultiplePasses, multiplePasses
+  , BlendMode, blendMode
+  , BindTexture, bindTexture
+  , SetUniform, RenderGraph.setUniform
+  , DepthFunc, depthFunc
+  , AlphaFunc, alphaFunc
+  , Viewport, viewport
+  , MonoidalMap(..)
+  , GLSLType(..)
+  ) where
 
 import Control.Monad.IO.Class
 import Control.Monad.Trans.Reader

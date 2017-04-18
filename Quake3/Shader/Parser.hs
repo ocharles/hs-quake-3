@@ -1,7 +1,12 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE OverloadedStrings #-}
 
-module Quake3.Shader.Parser where
+module Quake3.Shader.Parser
+  ( parseShaderFile
+  , Shader(..)
+  , Instruction(..)
+  , Op(..)
+  ) where
 
 import Control.Monad
 import Data.Char

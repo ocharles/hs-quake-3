@@ -4,7 +4,33 @@
 
 -- | This module transforms the result of "Quake3.Shader.Parser" into
 -- type-checked shaders.
-module Quake3.Shader.TypeCheck where
+module Quake3.Shader.TypeCheck
+  ( SortLayer(..)
+  , TCMod(..)
+  , Factor(..)
+  , Function(..)
+  , WaveFunction(..)
+  , AlphaFunc(..)
+  , TCModScale(..)
+  , Cull(..)
+  , passes
+  , cull
+  , depthWrite
+  , blendFunc
+  , sort
+  , DepthFunc(..)
+  , Map(..)
+  , AnimMap(..)
+  , alphaFunc
+  , depthFunc
+  , Shader(..)
+  , tCMod
+  , animMap
+  , map
+  , TCModScroll(..)
+  , tcShader
+  , Pass(..)
+  ) where
 
 import Prelude hiding (map)
 import Control.Applicative

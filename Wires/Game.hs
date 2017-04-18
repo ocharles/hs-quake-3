@@ -3,7 +3,9 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Wires.Game where
+module Wires.Game
+  ( game
+  ) where
 
 import Control.Arrow
 import Control.Lens
@@ -62,7 +64,7 @@ game
   -> [GLuint]
   -> Map.Map Parser.Texture (Maybe GLObjects.Texture -> f a)
   -> UniformLocation
-  -> Wire IO t (Event (Double, Viewport (f (GLIO a))))
+  -> Wire IO t (Event (Double, Viewport (f (GLIO a))), Event ())
 game bspFile lightMaps compiledShaders u_view = proc _ -> do
   maybeSdlEvent <- newEvent -< Just <$> SDL.pollEvent
   let sdlEvent = filterJust maybeSdlEvent
@@ -131,7 +133,10 @@ game bspFile lightMaps compiledShaders u_view = proc _ -> do
   -- Whenever we aren't stepping physics, render what we have.
   sinkM44 u_view -<
     projection !*! view <$ rendered
-  returnA -< (tGame, viewport (0,0,windowWidth,windowHeight) scene) <$ rendered
+
+  returnA -< ( (tGame, viewport (0,0,windowWidth,windowHeight) scene) <$ rendered
+            , Control.Monad.void $ filterJust $ fmap (preview (payload . _KeyboardEvent)) sdlEvent
+            )
 
   where
 

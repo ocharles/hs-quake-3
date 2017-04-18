@@ -2,7 +2,22 @@
 {-# LANGUAGE ScopedTypeVariables #-}
 {-# LANGUAGE ViewPatterns #-}
 
-module GLObjects where
+module GLObjects
+  ( UniformSetter(..)
+  , Program(..)
+  , Attribute(..)
+  , VertexArrayObject(..)
+  , bool
+  , m33
+  , Texture(..)
+  , UniformLocation(..)
+  , loadTexture
+  , attribIndex
+  , create
+  , uploadTexture2D
+  , loadVertexFragmentProgram
+  , uniformLocation
+  ) where
 
 import Codec.Picture
 import Codec.Picture.Types

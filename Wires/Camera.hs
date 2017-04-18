@@ -1,12 +1,14 @@
 {-# LANGUAGE Arrows #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Wires.Camera where
+module Wires.Camera
+  ( camera
+  , CameraEvents(..)
+  ) where
 
 import Control.Arrow
 import Control.Lens
 import Control.Wire
-import Control.Wire.Controller
 import Control.Wires.Extra
 import Data.Monoid
 import Linear

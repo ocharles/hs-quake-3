@@ -1,4 +1,6 @@
-module Control.Wires.Extra where
+module Control.Wires.Extra
+  ( filterJust
+  ) where
 
 import Prelude hiding ((.), id)
 import Control.Wire

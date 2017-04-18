@@ -3,7 +3,7 @@
 {-# LANGUAGE BangPatterns #-}
 {-# LANGUAGE RecordWildCards #-}
 
-module Main where
+module Main (main) where
 
 import Control.Arrow
 import Control.Exception
@@ -11,7 +11,6 @@ import Control.Lens ((<&>))
 import Control.Monad.Managed
 import Control.Monad.Trans.Reader
 import Control.Monad.Trans.State.Strict
-import qualified Control.Wire as W
 import qualified Control.Wire.Controller as W
 import Data.ByteString.Char8 (unpack)
 import Data.Foldable (traverse_)
@@ -115,8 +114,8 @@ main =
 
     liftIO $ W.control $ proc _ -> do
       e <- game bspFile (map GLObjects.textureName lightMaps) compiledShaders u_projViewModel -< ()
-      W.onEvent -< e <&> \(t, scene) -> do
+      W.onEvent -< (fst e) <&> \(t, scene) -> do
         runReaderT (draw scene) (t, shader)
         SDL.glSwapWindow window
 
-      returnA -< W.never
+      returnA -< snd e

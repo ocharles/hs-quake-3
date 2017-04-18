@@ -6,7 +6,10 @@
 {-# LANGUAGE TypeOperators #-}
 
 -- | CThis module compiles type-checked shader's into actual GL render passes.
-module Quake3.Shader.GL where
+module Quake3.Shader.GL
+  ( CompilationCache
+  , compileGL
+  ) where
 
 import Control.Applicative
 import Control.Exception
@@ -37,7 +40,7 @@ newtype CompilationCache = CompilationCache
 compileGL
   :: (MonadState CompilationCache m, MonadIO m)
   => TC.Shader
-  -> m (Maybe Texture -> (Sort |> Cull |> MultiplePasses |> BindTexture |> SetUniform Bool |> SetDynamicUniform (M33 Float) |> AlphaFunc |> BlendMode |> DepthFunc) ())
+  -> m (Maybe Texture -> Quake3Render ())
 compileGL shader = do
   passes <-
     for (shader ^. TC.passes) $ \pass -> do
@@ -96,6 +99,7 @@ compileGL shader = do
              Just TC.Equal -> GL_EQUAL) $
         ()
   return $ \lm ->
+    Quake3Render $
     Compose .
     sortLayer
       (let sortExplicit = getLast (shader ^. TC.sort)

@@ -2,29 +2,27 @@
 {-# LANGUAGE RecordWildCards #-}
 {-# LANGUAGE NamedFieldPuns #-}
 
-module UI where
+module UI
+  ( UI.initialize
+  , uploadLightMaps
+  , uploadBSP
+  ) where
 
-import Control.Monad
 import Data.Foldable (for_)
-import Data.Function (fix)
 import Data.Traversable (for)
 import qualified Data.Vector as BoxedV
 import qualified Data.Vector.Generic as V
 import qualified Data.Vector.Storable as V (unsafeWith)
+import Foreign
 import Foreign (Ptr, nullPtr)
 import Foreign.C (peekCString)
 import GLObjects
 import Graphics.GL
 import Linear
 import Parser
-import qualified Reactive.Banana as RB
-import Reactive.Banana hiding (Event)
 import Reactive.Banana.Frameworks
-import qualified Reactive.Banana.Frameworks as RB
 import SDL
-import System.Clock
 import Text.Printf
-import Foreign
 
 initialize :: IO Window
 initialize = do
@@ -203,44 +201,3 @@ glCallback source t ident severity _ message _ = do
         GL_DEBUG_SEVERITY_MEDIUM_ARB -> "Medium"
         GL_DEBUG_SEVERITY_LOW_ARB -> "Low"
         _ -> "Unknown"
-
-realTimeLoop
-  :: Window
-  -> (RB.Event EventPayload -> RB.Event Double -> RB.MomentIO (RB.Behavior a))
-  -> (a -> IO ())
-  -> IO ()
-realTimeLoop win network interpret = do
-  (physicsStepped, progressPhysics) <- newAddHandler
-  (rendered, render) <- newAddHandler
-  (sdlEvent, dispatchSdlEvent) <- newAddHandler
-  let dt = 1 / 120 :: Double
-      step accumulator lastTime = do
-        currentTime <- getTime Monotonic
-        events <- SDL.pollEvents
-        mapM_ (dispatchSdlEvent . SDL.eventPayload) events
-        let frameTime =
-              fromIntegral (toNanoSecs (diffTimeSpec currentTime lastTime)) *
-              1.0e-9
-        accumulator' <-
-          fix
-            (\loop accumulator' -> do
-               if accumulator' >= dt
-                 then do
-                   progressPhysics dt
-                   loop (accumulator - dt)
-                 else return accumulator')
-            (accumulator + frameTime)
-        render ()
-        SDL.glSwapWindow win
-        step accumulator' currentTime
-  compile
-    (do out <-
-          join
-            (liftA2
-               network
-               (fromAddHandler sdlEvent)
-               (fromAddHandler physicsStepped))
-        rendered' <- fromAddHandler rendered
-        reactimate (fmap interpret out <@ rendered')) >>=
-    actuate
-  getTime Monotonic >>= step 0
